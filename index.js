@@ -1,17 +1,21 @@
 const axios = require('axios');
 const dotenv = require('dotenv');
-const { Pool } = require('pg');
+const { createClient } = require('redis');
 
 dotenv.config();
 
 const API_URL = 'https://bsky.social/xrpc';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+// Configurando o cliente Redis
+const redisClient = createClient({
+  url: process.env.REDIS_URL,
 });
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+
+(async () => {
+  await redisClient.connect();
+})();
 
 async function getAccessToken() {
   const { data } = await axios.post(`${API_URL}/com.atproto.server.createSession`, {
@@ -33,12 +37,12 @@ async function getMentions(token) {
 }
 
 async function mentionExists(cid) {
-  const result = await pool.query('SELECT 1 FROM mentions WHERE cid = $1', [cid]);
-  return result.rowCount > 0;
+  const result = await redisClient.exists(cid);
+  return result === 1;
 }
 
 async function saveMention(cid) {
-  await pool.query('INSERT INTO mentions (cid) VALUES ($1)', [cid]);
+  await redisClient.set(cid, 'reposted');
 }
 
 async function repost(mention, token, did) {
