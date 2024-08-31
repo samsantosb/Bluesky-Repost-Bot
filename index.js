@@ -42,7 +42,9 @@ async function saveMention(cid) {
 }
 
 async function repost(mention, token, did) {
-  if (await mentionExists(mention.cid)) {
+  const isMention = await mentionExists(mention.cid)
+
+  if (isMention) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: 'Already reposted', data: null };
   }
