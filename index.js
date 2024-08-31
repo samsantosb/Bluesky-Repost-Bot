@@ -6,7 +6,6 @@ dotenv.config();
 
 const API_URL = 'https://bsky.social/xrpc';
 
-// Configurar o pool de conexões com o banco de dados
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -34,22 +33,12 @@ async function getMentions(token) {
 }
 
 async function mentionExists(cid) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('SELECT 1 FROM mentions WHERE cid = $1', [cid]);
-    return result.rowCount > 0;
-  } finally {
-    client.release();
-  }
+  const result = await pool.query('SELECT 1 FROM mentions WHERE cid = $1', [cid]);
+  return result.rowCount > 0;
 }
 
 async function saveMention(cid) {
-  const client = await pool.connect();
-  try {
-    await client.query('INSERT INTO mentions (cid) VALUES ($1)', [cid]);
-  } finally {
-    client.release();
-  }
+  await pool.query('INSERT INTO mentions (cid) VALUES ($1)', [cid]);
 }
 
 async function repost(mention, token, did) {
