@@ -6,7 +6,8 @@ dotenv.config();
 
 const API_URL = 'https://bsky.social/xrpc';
 
-// Configurando o cliente Redis
+console.log(typeof process.env.REDIS_URL, 'redisUrl type');
+
 const redisClient = createClient({
   url: process.env.REDIS_URL,
 });
