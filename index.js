@@ -1,10 +1,18 @@
 const axios = require('axios');
 const dotenv = require('dotenv');
+const { Pool } = require('pg');
 
 dotenv.config();
 
-const processedMentions = new Set();
 const API_URL = 'https://bsky.social/xrpc';
+
+// Configurar o pool de conexões com o banco de dados
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 async function getAccessToken() {
   const { data } = await axios.post(`${API_URL}/com.atproto.server.createSession`, {
@@ -25,8 +33,27 @@ async function getMentions(token) {
   return { mentions: data.notifications.filter(({ reason }) => reason === 'mention') };
 }
 
+async function mentionExists(cid) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query('SELECT 1 FROM mentions WHERE cid = $1', [cid]);
+    return result.rowCount > 0;
+  } finally {
+    client.release();
+  }
+}
+
+async function saveMention(cid) {
+  const client = await pool.connect();
+  try {
+    await client.query('INSERT INTO mentions (cid) VALUES ($1)', [cid]);
+  } finally {
+    client.release();
+  }
+}
+
 async function repost(mention, token, did) {
-  if (processedMentions.has(mention.cid)) {
+  if (await mentionExists(mention.cid)) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: 'Already reposted', data: null };
   }
@@ -52,7 +79,7 @@ async function repost(mention, token, did) {
     }
   });
 
-  processedMentions.add(mention.cid);
+  await saveMention(mention.cid);
 
   return { message: 'Reposted successfully', data };
 }
@@ -81,4 +108,4 @@ module.exports = async (req, res) => {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-}
+};
