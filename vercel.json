@@ -1,12 +1,12 @@
 {
   "functions": {
-    "index.js": {
+    "api/index.js": {
       "runtime": "nodejs18.x"
     }
   },
   "crons": [
     {
-      "path": "/",
+      "path": "/api/index",
       "schedule": "*/1 * * * *"
     }
   ]
