@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/cron.js": {
+    "index.js": {
       "runtime": "nodejs18.x"
     }
   },
