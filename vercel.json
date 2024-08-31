@@ -1,10 +1,4 @@
 {
-  "version": 2,
-  "functions": {
-    "api/index.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "crons": [
     {
       "path": "/api/index",
