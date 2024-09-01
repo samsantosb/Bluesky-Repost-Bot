@@ -1,7 +1,8 @@
 import axios from 'axios';
-import 'dotenv/config';
 import { Notification } from './interfaces/notifications';
-export async function repost(mention: Notification, token: string, did: string, processedMentions) {
+import 'dotenv/config';
+
+export async function repost(mention: Notification, token: string, did: string, processedMentions: Set<string>) {
   if (processedMentions.has(mention.cid)) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: "Already reposted", data: null };

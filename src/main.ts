@@ -2,9 +2,8 @@ import { repost } from "./repost";
 import { getMentions } from './mentions';
 import { getAccessToken } from './token';
 import 'dotenv/config';
-import { Notification } from "./interfaces/notifications";
 
-const processedMentions = new Set<Notification>();
+const processedMentions = new Set<string>();
 
 const ONE_MINUTE = 60000;
 const ONE_HOUR = 3600000;
@@ -34,11 +33,11 @@ async function main() {
 
 main();
 
-const mainInterval = setInterval(() => {
+setInterval(() => {
   main();
 }, ONE_MINUTE);
 
-const cleanupInterval = setInterval(() => {
+setInterval(() => {
   processedMentions.clear();
   console.log("Cleared processed mentions set");
 }, ONE_HOUR);
