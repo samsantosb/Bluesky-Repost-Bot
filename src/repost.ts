@@ -1,9 +1,16 @@
-import axios from 'axios';
-import { Notification } from './interfaces/notifications';
-import 'dotenv/config';
+import axios from "axios";
+import { Notification } from "./interfaces/notifications";
+import "dotenv/config";
+import { mentionExists, saveMention } from "./redis";
 
-export async function repost(mention: Notification, token: string, did: string, processedMentions: Set<string>) {
-  if (processedMentions.has(mention.cid)) {
+export async function repost(
+  mention: Notification,
+  token: string,
+  did: string
+) {
+  const isMention = await mentionExists(mention.cid);
+
+  if (isMention) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: "Already reposted", data: null };
   }
@@ -33,7 +40,7 @@ export async function repost(mention: Notification, token: string, did: string, 
     }
   );
 
-  processedMentions.add(mention.cid);
+  await saveMention(mention.cid);
 
   return { message: "Reposted successfully", data };
 }

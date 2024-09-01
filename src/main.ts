@@ -1,14 +1,12 @@
 import { repost } from "./repost";
 import { getMentions } from './mentions';
 import { getAccessToken } from './token';
+import { connectRedis } from "./redis";
 import 'dotenv/config';
 
-const processedMentions = new Set<string>();
+connectRedis()
 
-const ONE_MINUTE = 60000;
-const ONE_HOUR = 3600000;
-
-async function main() {
+export async function main(req, res) {
   try {
     const startTime = new Date().toLocaleTimeString();
     console.log(`Tick executed ${startTime}`);
@@ -19,26 +17,18 @@ async function main() {
 
     if (!mentions.length) {
       console.log("No mentions found");
+      res.status(200).json({ message: 'No mentions found' });
       return;
     }
 
     for (const mention of mentions) {
-      await repost(mention, token, did, processedMentions);
+      await repost(mention, token, did);
     }
+    res.status(200).json({ message: 'Reposts processed successfully' });
   } catch (error) {
     console.error("Error:", error);
+    res.status(500).json({ error: 'Internal Server Error' });
     process.exit(1);
   }
 }
-
-main();
-
-setInterval(() => {
-  main();
-}, ONE_MINUTE);
-
-setInterval(() => {
-  processedMentions.clear();
-  console.log("Cleared processed mentions set");
-}, ONE_HOUR);
 
