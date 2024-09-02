@@ -66,7 +66,7 @@ async function repost(mention, token, did) {
 
   console.log(`Reposting: ${mention.cid}`);
 
-  const isCcMention = /^cc @\w+/i.test(mention.record.text.trim());
+  const isCcMention = /^cc[\s:/-]?@\w+/i.test(mention.record.text.trim());
   const parentExists = mention.record.reply?.parent;
 
   const target = isCcMention && parentExists ? mention.record.reply.parent : mention;
