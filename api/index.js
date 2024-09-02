@@ -46,8 +46,18 @@ async function saveMention(cid) {
   await redisClient.set(cid, 'reposted');
 }
 
+const createRepostData = (target, did) => ({
+  $type: 'app.bsky.feed.repost',
+  repo: did,
+  collection: 'app.bsky.feed.repost',
+  record: {
+    subject: { uri: target.uri, cid: target.cid },
+    createdAt: new Date().toISOString(),
+  },
+});
+
 async function repost(mention, token, did) {
-  const isMention = await mentionExists(mention.cid)
+  const isMention = await mentionExists(mention.cid);
 
   if (isMention) {
     console.log(`Already reposted: ${mention.cid}`);
@@ -56,18 +66,11 @@ async function repost(mention, token, did) {
 
   console.log(`Reposting: ${mention.cid}`);
 
-  const repostData = {
-    $type: 'app.bsky.feed.repost',
-    repo: did,
-    collection: 'app.bsky.feed.repost',
-    record: {
-      subject: {
-        uri: mention.uri,
-        cid: mention.cid
-      },
-      createdAt: new Date().toISOString()
-    }
-  };
+  const isCcMention = /^cc @\w+/i.test(mention.record.text.trim());
+  const parentExists = mention.record.reply?.parent;
+
+  const target = isCcMention && parentExists ? mention.record.reply.parent : mention;
+  const repostData = createRepostData(target, did);
 
   const { data } = await axios.post(`${API_URL}/com.atproto.repo.createRecord`, repostData, {
     headers: {
@@ -78,6 +81,7 @@ async function repost(mention, token, did) {
   await saveMention(mention.cid);
 
   return { message: 'Reposted successfully', data };
+
 }
 
 module.exports = async (req, res) => {
