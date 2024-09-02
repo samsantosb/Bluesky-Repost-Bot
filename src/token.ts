@@ -1,9 +1,10 @@
 import axios from "axios";
 import { Token } from "./interfaces/token";
+import { api } from "./config/api";
 
 export async function getAccessToken(): Promise<Token> {
-  const { data } = await axios.post(
-    `${process.env.API_URL}/com.atproto.server.createSession`,
+  const { data } = await api.post(
+    `/com.atproto.server.createSession`,
     {
       identifier: process.env.IDENTIFIER,
       password: process.env.PASSWORD,

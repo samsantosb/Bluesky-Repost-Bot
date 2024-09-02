@@ -2,6 +2,8 @@ import axios from "axios";
 import { Notification } from "./interfaces/notifications";
 import "dotenv/config";
 import { mentionExists, saveMention } from "./redis";
+import { createRepostData } from "./createRepostData";
+import { api } from "./config/api";
 
 export async function repost(
   mention: Notification,
@@ -17,20 +19,14 @@ export async function repost(
 
   console.log(`Reposting: ${mention.cid}`);
 
-  const repostData = {
-    $type: "app.bsky.feed.repost",
-    repo: did,
-    collection: "app.bsky.feed.repost",
-    record: {
-      subject: {
-        uri: mention.uri,
-        cid: mention.cid,
-      },
-      createdAt: new Date().toISOString(),
-    },
-  };
+  // Simplificação da verificação para ver se inclui "cc"
+  const isCcMention = mention.record.text.toLowerCase().includes('cc');
+  const parentExists = mention.record.reply?.parent;
 
-  const { data } = await axios.post(
+  const target = isCcMention && parentExists ? mention.record.reply.parent : mention;
+  const repostData = createRepostData(target, did);
+
+  const { data } = await api.post(
     `${process.env.API_URL}/com.atproto.repo.createRecord`,
     repostData,
     {

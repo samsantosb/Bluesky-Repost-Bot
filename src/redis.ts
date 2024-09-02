@@ -15,12 +15,12 @@ const connectRedis = () => {
   })();
 };
 
-async function mentionExists(cid) {
+async function mentionExists(cid: string) {
   const result = await redisClient.exists(cid);
   return result === 1;
 }
 
-async function saveMention(cid) {
+async function saveMention(cid: string) {
   await redisClient.set(cid, "reposted");
 }
 

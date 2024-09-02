@@ -11,7 +11,7 @@ export interface Notification {
   author: Author;
   reason: string;
   reasonSubject: string;
-  record: {};
+  record: Record;
   isRead: boolean;
   indexedAt: string;
 }
@@ -26,6 +26,12 @@ export interface Author {
   createdAt: string;
 }
 
-
-
-
+export interface Record {
+  text: string
+  reply: Parent;
+}
+export interface Parent {
+  uri: string;
+  cid: string;
+  parent: any;
+}
