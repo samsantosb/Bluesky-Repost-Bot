@@ -20,9 +20,13 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
 })();
 
 const getAccessToken = async () => {
-  const [cachedToken, cachedDid] = await Promise.all([redisClient.get('accessToken'), redisClient.get('did')])
+  const [cachedToken, cachedDid] =
+    await Promise.all(
+      [redisClient.get('accessToken'), redisClient.get('did')])
 
-  if (cachedToken && cachedDid) {
+  const isTokenValid = cachedToken && cachedDid;
+
+  if (isTokenValid) {
     return { token: cachedToken, did: cachedDid };
   }
 
@@ -32,7 +36,9 @@ const getAccessToken = async () => {
   });
 
 
-  await Promise.all([redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR), redisClient.set('did', data.did, 'EX', HALF_HOUR)]);
+  await Promise.all(
+    [redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR),
+    redisClient.set('did', data.did, 'EX', HALF_HOUR)]);
 
   return { token: data.accessJwt, did: data.did };
 };
@@ -47,7 +53,7 @@ const getMentions = async (token) => {
   return { mentions: data.notifications.filter(({ reason }) => reason === 'mention') };
 };
 
-const mentionExists = async (cid) => {
+const mentionIsAlreadyRegistered = async (cid) => {
   return (await redisClient.exists(cid)) === 1;
 };
 
@@ -66,7 +72,9 @@ const createRepostData = (target, did) => ({
 });
 
 const repost = async (mention, token, did) => {
-  if (await mentionExists(mention.cid)) {
+  const isAlreadyReposted = await mentionIsAlreadyRegistered(mention.cid);
+
+  if (isAlreadyReposted) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: 'Already reposted', data: null };
   }
