@@ -20,34 +20,27 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
 })();
 
 const getAccessToken = async () => {
-  try {
-    const [cachedToken, cachedDid] = await Promise.all([
-      redisClient.get('accessToken'),
-      redisClient.get('did')
-    ]);
+  await redisClient.get('accessToken');
+  await redisClient.get('did')
 
-    if (cachedToken && cachedDid) {
-      console.log('Using cached token');
-      return { token: cachedToken, did: cachedDid };
-    }
 
-    const { data } = await axios.post(`${API_URL}/com.atproto.server.createSession`, {
-      identifier: process.env.IDENTIFIER,
-      password: process.env.PASSWORD,
-    });
-
-    console.log('New token acquired');
-
-    await Promise.all([
-      redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR),
-      redisClient.set('did', data.did, 'EX', HALF_HOUR)
-    ]);
-
-    return { token: data.accessJwt, did: data.did };
-  } catch (error) {
-    console.error('Error fetching token:', error);
-    console.error('failed to get access token');
+  if (cachedToken && cachedDid) {
+    console.log('Using cached token');
+    return { token: cachedToken, did: cachedDid };
   }
+
+  const { data } = await axios.post(`${API_URL}/com.atproto.server.createSession`, {
+    identifier: process.env.IDENTIFIER,
+    password: process.env.PASSWORD,
+  });
+
+  console.log('New token acquired');
+
+  await redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR);
+  await redisClient.set('did', data.did, 'EX', HALF_HOUR);
+
+
+  return { token: data.accessJwt, did: data.did };
 };
 
 const getMentions = async (token) => {
