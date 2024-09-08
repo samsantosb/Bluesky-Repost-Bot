@@ -27,6 +27,7 @@ const getAccessToken = async () => {
   const isTokenValid = cachedToken && cachedDid;
 
   if (isTokenValid) {
+    console.log('Using cached token');
     return { token: cachedToken, did: cachedDid };
   }
 
@@ -35,6 +36,8 @@ const getAccessToken = async () => {
     password: process.env.PASSWORD,
   });
 
+
+  console.log('New token acquired');
 
   await Promise.all(
     [redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR),
@@ -100,8 +103,6 @@ const repost = async (mention, token, did) => {
 
 module.exports = async (req, res) => {
   try {
-    console.log(`Tick executed ${new Date().toLocaleTimeString()}`);
-
     const { token, did } = await getAccessToken();
     const mentions = await getMentions(token);
 
