@@ -66,7 +66,6 @@ async function repost(mention, token, did) {
 
   console.log(`Reposting: ${mention.cid}`);
 
-  // Simplificação da verificação para ver se inclui "cc"
   const isCcMention = mention.record.text.toLowerCase().includes('cc');
   const parentExists = mention.record.reply?.parent;
 
