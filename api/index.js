@@ -20,8 +20,8 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
 })();
 
 const getAccessToken = async () => {
-  await redisClient.get('accessToken');
-  await redisClient.get('did')
+  const cachedToken = await redisClient.get('accessToken');
+  const cachedDid = await redisClient.get('did')
 
 
   if (cachedToken && cachedDid) {
