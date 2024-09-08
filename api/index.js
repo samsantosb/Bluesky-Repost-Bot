@@ -6,7 +6,8 @@ dotenv.config();
 
 const API_URL = 'https://bsky.social/xrpc';
 
-console.log(typeof process.env.REDIS_URL, 'redisUrl type');
+const HALF_HOUR = 30 * 60;
+const SIX_HOURS = 6 * 60 * 60;
 
 const redisClient = createClient({
   url: process.env.REDIS_URL,
@@ -18,33 +19,41 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
   await redisClient.connect();
 })();
 
-async function getAccessToken() {
+const getAccessToken = async () => {
+  const [cachedToken, cachedDid] = await Promise.all([redisClient.get('accessToken'), redisClient.get('did')])
+
+  if (cachedToken && cachedDid) {
+    return { token: cachedToken, did: cachedDid };
+  }
+
   const { data } = await axios.post(`${API_URL}/com.atproto.server.createSession`, {
     identifier: process.env.IDENTIFIER,
-    password: process.env.PASSWORD
+    password: process.env.PASSWORD,
   });
 
-  return { token: data.accessJwt, did: data.did };
-}
 
-async function getMentions(token) {
+  await Promise.all([redisClient.set('accessToken', data.accessJwt, 'EX', HALF_HOUR), redisClient.set('did', data.did, 'EX', HALF_HOUR)]);
+
+  return { token: data.accessJwt, did: data.did };
+};
+
+const getMentions = async (token) => {
   const { data } = await axios.get(`${API_URL}/app.bsky.notification.listNotifications`, {
     headers: {
-      'Authorization': `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   return { mentions: data.notifications.filter(({ reason }) => reason === 'mention') };
-}
+};
 
-async function mentionExists(cid) {
-  const result = await redisClient.exists(cid);
-  return result === 1;
-}
+const mentionExists = async (cid) => {
+  return (await redisClient.exists(cid)) === 1;
+};
 
-async function saveMention(cid) {
-  await redisClient.set(cid, 'reposted');
-}
+const saveMention = async (cid) => {
+  await redisClient.set(cid, 'reposted', 'EX', SIX_HOURS);
+};
 
 const createRepostData = (target, did) => ({
   $type: 'app.bsky.feed.repost',
@@ -56,10 +65,8 @@ const createRepostData = (target, did) => ({
   },
 });
 
-async function repost(mention, token, did) {
-  const isMention = await mentionExists(mention.cid);
-
-  if (isMention) {
+const repost = async (mention, token, did) => {
+  if (await mentionExists(mention.cid)) {
     console.log(`Already reposted: ${mention.cid}`);
     return { message: 'Already reposted', data: null };
   }
@@ -74,37 +81,39 @@ async function repost(mention, token, did) {
 
   const { data } = await axios.post(`${API_URL}/com.atproto.repo.createRecord`, repostData, {
     headers: {
-      'Authorization': `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   await saveMention(mention.cid);
 
   return { message: 'Reposted successfully', data };
-}
+};
 
 module.exports = async (req, res) => {
   try {
-    const startTime = new Date().toLocaleTimeString();
-    console.log(`Tick executed ${startTime}`);
+    console.log(`Tick executed ${new Date().toLocaleTimeString()}`);
 
     const { token, did } = await getAccessToken();
-
-    const { mentions } = await getMentions(token);
+    const mentions = await getMentions(token);
 
     if (!mentions.length) {
       console.log('No mentions found');
-      res.status(200).json({ message: 'No mentions found' });
-      return;
+      return res.status(200).json({ message: 'No mentions found' });
     }
 
     for (const mention of mentions) {
       await repost(mention, token, did);
     }
 
-    res.status(200).json({ message: 'Reposts processed successfully' });
+    return res.status(200).json({ message: 'Reposts processed successfully' });
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+
+    if (error.response && error.response.status === 401) {
+      await Promise.all([redisClient.del('accessToken'), redisClient.del('did')]);
+    }
+
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
