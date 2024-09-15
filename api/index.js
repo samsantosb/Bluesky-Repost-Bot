@@ -66,10 +66,8 @@ async function repost(mention, token, did) {
 
   console.log(`Reposting: ${mention.cid}`);
 
-  const isCcMention = mention.record.text.toLowerCase().includes('cc');
-  const parentExists = mention.record.reply?.parent;
+  const target = mention.record.reply?.parent || mention;
 
-  const target = isCcMention && parentExists ? mention.record.reply.parent : mention;
   const repostData = createRepostData(target, did);
 
   const { data } = await axios.post(`${API_URL}/com.atproto.repo.createRecord`, repostData, {
