@@ -2,6 +2,8 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { createClient } = require('redis');
 
+console.log('testing ssh')
+
 dotenv.config();
 
 const API_URL = 'https://bsky.social/xrpc';
